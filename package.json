@@ -24,6 +24,7 @@
         "express": "^4.17.1",
         "get-urls": "^10.0.0",
         "html-to-text": "^6.0.0",
+        "ndjson": "^2.0.0",
         "url-metadata": "^2.5.0"
     }
 }
