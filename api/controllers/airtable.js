@@ -2,14 +2,14 @@
 
 var Airtable = require("airtable");
 
-exports.getDataFromAirtable = function (req, res) {
+async function getDataFromAirtable(callback) {
   var base = new Airtable({ apiKey: "keyQIwFiMRd4Juqo4" }).base(
-    "appcu1qWsme6tzNri"
+    "app5ZA3rEelmM9HVC"
   );
 
   var recordList = [];
 
-  base("Questions")
+  base("Prospektgenerator")
     .select({
       // Get all records from view prospektgenerator
       maxRecords: 10000,
@@ -20,10 +20,9 @@ exports.getDataFromAirtable = function (req, res) {
         // This function (`page`) will get called for each page of records.
 
         records.forEach(function (record) {
-          console.log(record);
-
           //Create object with needed fields
           var obj = {
+            id: record.getId(),
             question: record.get("Question/CTA"),
             grouping: record.get("Grouping"),
             score: record.get("Score"),
@@ -49,9 +48,11 @@ exports.getDataFromAirtable = function (req, res) {
           console.error(err);
           return;
         } else {
-          console.log(recordList[0]);
-          res.send(recordList);
+          // console.log(recordList[0]);
+          callback(recordList);
         }
       }
     );
-};
+}
+
+module.exports = { getDataFromAirtable };
