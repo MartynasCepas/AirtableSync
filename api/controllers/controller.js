@@ -1,6 +1,7 @@
 "use strict";
 const Airtable = require("airtable");
 const https = require("https");
+const fetch = require("node-fetch");
 var request = require("request");
 const airtableapi = require("../controllers/airtable");
 
@@ -10,21 +11,23 @@ const bubbleWorkflowURL =
 const airtableURL =
   "https://api.airtable.com/v0/appcu1qWsme6tzNri/Questions?maxRecords=3&view=All";
 
-function getDataFromBubble(cursor,callback) {
-  request.get(
-    {
-      url: bubbleURL + "/Question?cursor=0",
-      headers: {
-        Bearer: "97a592b87f2da8c128ffc1e59af0fc6a",
-      },
+async function getAllDataFromBubble(callback) {
+  var requestList = [];
+  var cursor = 0;
+  var remaining = 100;
 
-      method: "GET",
-    },
-
-    function (e, r, body) {
-      callback(body);
-    }
-  );
+  do {
+    await fetch(bubbleURL + "/Question?limit=50&cursor=" + cursor)
+      .then((res) => res.json())
+      .then((json) => {
+        remaining = json.response.remaining;
+        cursor += 50;
+        json.response.results.forEach((item) => {
+          requestList.push(item);
+        });
+      });
+  } while (remaining != 0);
+  callback(requestList);
 }
 
 function postDataToBubble(newItem, callback) {
@@ -68,7 +71,7 @@ function deleteDataFromBubble(itemid, callback) {
 
 exports.sync = function (req, res) {
   airtableapi.getDataFromAirtable(function (airtableData) {
-    getDataFromBubble(function (bubble_data) {
+    getAllDataFromBubble(function (bubble_data) {
       findAdd(airtableData, bubble_data);
       findDelete(airtableData, bubble_data);
       res.send("working");
@@ -77,9 +80,8 @@ exports.sync = function (req, res) {
 };
 
 function findAdd(airtableData, bubbleData) {
-  var bubbleObj = JSON.parse(bubbleData);
+  var bubbleObj = bubbleData;
   var listToAdd = [];
-  // console.log(bubbleObj.response.results);
 
   airtableData.forEach((airtableItem) => {
     if (airtableItem.app === undefined) {
@@ -90,7 +92,7 @@ function findAdd(airtableData, bubbleData) {
   airtableData.forEach((airtableItem) => {
     var add = 1;
 
-    bubbleObj.response.results.forEach((bubbleItem) => {
+    bubbleObj.forEach((bubbleItem) => {
       if (
         airtableItem.id.replace(/\s+/g, "") ==
         bubbleItem.airtableid_text.replace(/\s+/g, "")
@@ -128,7 +130,7 @@ function findAdd(airtableData, bubbleData) {
 
   console.log("New item count: " + listToAdd.length);
   console.log("Airtable rows count: " + airtableData.length);
-  console.log("Bubble rows count: " + bubbleObj.response.results.length);
+  console.log("Bubble rows count: " + bubbleObj.length);
   listToAdd.forEach((newitem) => {
     try {
       //  postDataToBubble(newitem, function (response) {
@@ -141,10 +143,10 @@ function findAdd(airtableData, bubbleData) {
 }
 
 function findDelete(airtableData, bubbleData) {
-  var bubbleObj = JSON.parse(bubbleData);
+  var bubbleObj = bubbleData;
   var listToDelete = [];
 
-  bubbleObj.response.results.forEach((bubbleItem) => {
+  bubbleObj.forEach((bubbleItem) => {
     if (
       !airtableData.some(
         (airtableItem) => airtableItem.id === bubbleItem.airtableid_text
@@ -155,7 +157,7 @@ function findDelete(airtableData, bubbleData) {
   });
 
   console.log(listToDelete);
-  console.log(listToDelete.length);
+  console.log("Delete items count: " + listToDelete.length);
 
   listToDelete.forEach((item) => {
     try {
