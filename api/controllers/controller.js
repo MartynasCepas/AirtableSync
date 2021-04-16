@@ -10,18 +10,18 @@ const bubbleWorkflowURL =
 const airtableURL =
   "https://api.airtable.com/v0/appcu1qWsme6tzNri/Questions?maxRecords=3&view=All";
 
-function getDataFromBubble(callback) {
+function getDataFromBubble(cursor,callback) {
   request.get(
     {
-      url: bubbleURL + "/Question",
+      url: bubbleURL + "/Question?cursor=0",
       headers: {
         Bearer: "97a592b87f2da8c128ffc1e59af0fc6a",
       },
+
       method: "GET",
     },
 
     function (e, r, body) {
-      // console.log(body);
       callback(body);
     }
   );
@@ -42,40 +42,35 @@ function postDataToBubble(newItem, callback) {
     },
 
     function (e, r, body) {
-      console.log(body);
+      //console.log(body);
       // console.log(r);
       callback(body);
     }
   );
 }
 
-exports.deleteDataFromBubble = function (req, res) {
-  request.post(
+function deleteDataFromBubble(itemid, callback) {
+  request.delete(
     {
-      url:
-        "https://paper-pusher.bubbleapps.io/version-test/api/1.1/wf/delete_thing/initialize",
+      url: bubbleURL + "/Question/" + itemid,
       headers: {
         Bearer: "97a592b87f2da8c128ffc1e59af0fc6a",
-        "content-type": "application/json",
       },
 
-      body: JSON.stringify({ test_text: "test1" }),
-
-      method: "POST",
+      method: "DELETE",
     },
 
     function (e, r, body) {
-      console.log(body);
-      // console.log(r);
-      res.send(body);
+      callback(body);
     }
   );
-};
+}
 
 exports.sync = function (req, res) {
   airtableapi.getDataFromAirtable(function (airtableData) {
     getDataFromBubble(function (bubble_data) {
       findAdd(airtableData, bubble_data);
+      findDelete(airtableData, bubble_data);
       res.send("working");
     });
   });
@@ -104,7 +99,7 @@ function findAdd(airtableData, bubbleData) {
       }
     });
 
-    if (add === 1 && airtableItem.app != undefined) {
+    if (add == 1 && airtableItem.app != undefined) {
       var newBubbleItem = {
         airtableid_text: airtableItem.id || "",
         appid_text: airtableItem.app[0] || "",
@@ -131,19 +126,45 @@ function findAdd(airtableData, bubbleData) {
     }
   });
 
-  console.log(listToAdd.length);
-  console.log(airtableData.length);
+  console.log("New item count: " + listToAdd.length);
+  console.log("Airtable rows count: " + airtableData.length);
+  console.log("Bubble rows count: " + bubbleObj.response.results.length);
   listToAdd.forEach((newitem) => {
     try {
-      //postDataToBubble(newitem, function (response) {
-        console.log(newitem);
-      //});
+      //  postDataToBubble(newitem, function (response) {
+      console.log(newitem);
+      //  });
     } catch (e) {
       console.log(e);
     }
   });
-};
+}
 
 function findDelete(airtableData, bubbleData) {
-  
+  var bubbleObj = JSON.parse(bubbleData);
+  var listToDelete = [];
+
+  bubbleObj.response.results.forEach((bubbleItem) => {
+    if (
+      !airtableData.some(
+        (airtableItem) => airtableItem.id === bubbleItem.airtableid_text
+      )
+    ) {
+      listToDelete.push(bubbleItem);
+    }
+  });
+
+  console.log(listToDelete);
+  console.log(listToDelete.length);
+
+  listToDelete.forEach((item) => {
+    try {
+      deleteDataFromBubble(item._id, function (response) {
+        console.log(item._id);
+        console.log(response);
+      });
+    } catch (e) {
+      console.log(e);
+    }
+  });
 }
