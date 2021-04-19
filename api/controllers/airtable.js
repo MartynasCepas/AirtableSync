@@ -2,8 +2,8 @@
 
 var Airtable = require("airtable");
 
-async function getDataFromAirtable(callback) {
-  var base = new Airtable({ apiKey: "keyQIwFiMRd4Juqo4" }).base(
+async function getDataFromAirtable(airtableKey, callback) {
+  var base = new Airtable({ apiKey: airtableKey }).base(
     "app5ZA3rEelmM9HVC"
   );
 

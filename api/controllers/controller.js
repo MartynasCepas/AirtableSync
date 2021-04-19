@@ -11,6 +11,8 @@ const bubbleWorkflowURL =
 const airtableURL =
   "https://api.airtable.com/v0/appcu1qWsme6tzNri/Questions?maxRecords=3&view=All";
 
+var bubbleKey = "";
+
 async function getAllDataFromBubble(callback) {
   var requestList = [];
   var cursor = 0;
@@ -18,7 +20,7 @@ async function getAllDataFromBubble(callback) {
 
   do {
     await fetch(bubbleURL + "/Question?limit=50&cursor=" + cursor, {
-      headers: { Authorization: "Bearer 97a592b87f2da8c128ffc1e59af0fc6a" },
+      headers: { Authorization: bubbleKey },
     })
       .then((res) => res.json())
       .then((json) => {
@@ -37,7 +39,7 @@ function postDataToBubble(newItem, callback) {
     {
       url: bubbleURL + "/Question",
       headers: {
-        Authorization: "Bearer 97a592b87f2da8c128ffc1e59af0fc6a",
+        Authorization: bubbleKey,
         "content-type": "application/json",
       },
 
@@ -59,7 +61,7 @@ function deleteDataFromBubble(itemid, callback) {
     {
       url: bubbleURL + "/Question/" + itemid,
       headers: {
-        Authorization: "Bearer 97a592b87f2da8c128ffc1e59af0fc6a",
+        Authorization: bubbleKey,
       },
 
       method: "DELETE",
@@ -76,7 +78,7 @@ function modifyDataInBubble(itemid, item, callback) {
     {
       url: bubbleURL + "/Question/" + itemid,
       headers: {
-        Authorization: "Bearer 97a592b87f2da8c128ffc1e59af0fc6a",
+        Authorization: bubbleKey,
         "content-type": "application/json",
       },
       body: JSON.stringify(item),
@@ -91,7 +93,10 @@ function modifyDataInBubble(itemid, item, callback) {
 }
 
 exports.sync = function (req, res) {
-  airtableapi.getDataFromAirtable(function (airtableData) {
+  var airtableKey = req.headers.authorizationairtable;
+  bubbleKey = req.headers.authorizationbubble;
+  console.log(airtableKey);
+  airtableapi.getDataFromAirtable(airtableKey, function (airtableData) {
     getAllDataFromBubble(function (bubble_data) {
       findAdd(airtableData, bubble_data);
       findDelete(airtableData, bubble_data);
@@ -235,10 +240,9 @@ function findModified(airtableData, bubbleData) {
 
       dictionaryItem.value = newBubbleItem;
       listToModify.push(dictionaryItem);
-      console.log(dictionaryItem);
     }
   });
-
+  console.log("Modify items count: " + listToModify.length);
   listToModify.forEach((item) => {
     try {
       modifyDataInBubble(item.id, item.value, function (response) {
