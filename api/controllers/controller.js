@@ -17,7 +17,9 @@ async function getAllDataFromBubble(callback) {
   var remaining = 100;
 
   do {
-    await fetch(bubbleURL + "/Question?limit=50&cursor=" + cursor)
+    await fetch(bubbleURL + "/Question?limit=50&cursor=" + cursor, {
+      headers: { Authorization: "Bearer 97a592b87f2da8c128ffc1e59af0fc6a" },
+    })
       .then((res) => res.json())
       .then((json) => {
         remaining = json.response.remaining;
@@ -35,7 +37,7 @@ function postDataToBubble(newItem, callback) {
     {
       url: bubbleURL + "/Question",
       headers: {
-        Bearer: "97a592b87f2da8c128ffc1e59af0fc6a",
+        Authorization: "Bearer 97a592b87f2da8c128ffc1e59af0fc6a",
         "content-type": "application/json",
       },
 
@@ -57,7 +59,7 @@ function deleteDataFromBubble(itemid, callback) {
     {
       url: bubbleURL + "/Question/" + itemid,
       headers: {
-        Bearer: "97a592b87f2da8c128ffc1e59af0fc6a",
+        Authorization: "Bearer 97a592b87f2da8c128ffc1e59af0fc6a",
       },
 
       method: "DELETE",
@@ -69,11 +71,31 @@ function deleteDataFromBubble(itemid, callback) {
   );
 }
 
+function modifyDataInBubble(itemid, item, callback) {
+  request.patch(
+    {
+      url: bubbleURL + "/Question/" + itemid,
+      headers: {
+        Authorization: "Bearer 97a592b87f2da8c128ffc1e59af0fc6a",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(item),
+      method: "PATCH",
+    },
+
+    function (e, r, body) {
+      console.log(body);
+      callback(body);
+    }
+  );
+}
+
 exports.sync = function (req, res) {
   airtableapi.getDataFromAirtable(function (airtableData) {
     getAllDataFromBubble(function (bubble_data) {
       findAdd(airtableData, bubble_data);
       findDelete(airtableData, bubble_data);
+      findModified(airtableData, bubble_data);
       res.send("working");
     });
   });
@@ -133,9 +155,9 @@ function findAdd(airtableData, bubbleData) {
   console.log("Bubble rows count: " + bubbleObj.length);
   listToAdd.forEach((newitem) => {
     try {
-      //  postDataToBubble(newitem, function (response) {
-      console.log(newitem);
-      //  });
+      postDataToBubble(newitem, function (response) {
+        console.log(newitem);
+      });
     } catch (e) {
       console.log(e);
     }
@@ -161,8 +183,65 @@ function findDelete(airtableData, bubbleData) {
 
   listToDelete.forEach((item) => {
     try {
-      deleteDataFromBubble(item._id, function (response) {
-        console.log(item._id);
+      deleteDataFromBubble(item._id, function (response) {});
+    } catch (e) {
+      console.log(e);
+    }
+  });
+}
+
+function findModified(airtableData, bubbleData) {
+  var bubbleObj = bubbleData;
+  var listToModify = [];
+
+  airtableData.forEach((airtableItem) => {
+    var dictionaryItem = { id: "", value: {} };
+
+    bubbleObj.forEach((bubbleItem) => {
+      if (
+        airtableItem.id.replace(/\s+/g, "") ==
+        bubbleItem.airtableid_text.replace(/\s+/g, "")
+      ) {
+        if (
+          bubbleItem.question_text != airtableItem.question ||
+          bubbleItem.appid_text != airtableItem.app[0] ||
+          bubbleItem.conditional_text != airtableItem.conditional ||
+          bubbleItem.datatype_text != airtableItem.datatype ||
+          bubbleItem.dynamic_text != airtableItem.dynamic ||
+          bubbleItem.grouping_text != airtableItem.grouping ||
+          bubbleItem.maxchar_number != airtableItem.max_char ||
+          bubbleItem.onnewpage_number != airtableItem.on_new_page
+        ) {
+          //    console.log(bubbleItem);
+          //    console.log(airtableItem);
+          dictionaryItem.id = bubbleItem._id;
+        }
+      }
+    });
+
+    if (dictionaryItem.id != 0 && airtableItem.app != undefined) {
+      var newBubbleItem = {
+        airtableid_text: airtableItem.id || "",
+        appid_text: airtableItem.app[0] || "",
+        conditional_text: airtableItem.conditional || "",
+        datatype_text: airtableItem.datatype || "",
+        dynamic_text: airtableItem.dynamic || "",
+        grouping_text: airtableItem.grouping || "",
+        maxchar_number: airtableItem.max_char || 0,
+        onnewpage_number: airtableItem.on_new_page || 0,
+        question_text: airtableItem.question || "",
+        score_text: airtableItem.score || "",
+      };
+
+      dictionaryItem.value = newBubbleItem;
+      listToModify.push(dictionaryItem);
+      console.log(dictionaryItem);
+    }
+  });
+
+  listToModify.forEach((item) => {
+    try {
+      modifyDataInBubble(item.id, item.value, function (response) {
         console.log(response);
       });
     } catch (e) {
