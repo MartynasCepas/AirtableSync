@@ -206,7 +206,8 @@ function findModified(airtableData, bubbleData) {
           bubbleItem.grouping_text != airtableItem.grouping ||
           bubbleItem.maxchar_number != airtableItem.max_char ||
           bubbleItem.onnewpage_number != airtableItem.on_new_page ||
-          bubbleItem.selection_of_answers_list_text != airtableItem.answers
+          JSON.stringify(bubbleItem.selection_of_answers_list_text) !=
+            JSON.stringify(airtableItem.answers)
         ) {
           dictionaryItem.id = bubbleItem._id;
         }
