@@ -6,10 +6,6 @@ var request = require("request");
 const airtableapi = require("../controllers/airtable");
 
 const bubbleURL = "https://paper-pusher.bubbleapps.io/version-test/api/1.1/obj";
-const bubbleWorkflowURL =
-  "https://paper-pusher.bubbleapps.io/version-test/api/1.1/wf";
-const airtableURL =
-  "https://api.airtable.com/v0/appcu1qWsme6tzNri/Questions?maxRecords=3&view=All";
 
 var bubbleKey = "";
 
@@ -49,8 +45,6 @@ function postDataToBubble(newItem, callback) {
     },
 
     function (e, r, body) {
-      //console.log(body);
-      // console.log(r);
       callback(body);
     }
   );
@@ -86,30 +80,31 @@ function modifyDataInBubble(itemid, item, callback) {
     },
 
     function (e, r, body) {
-      console.log(body);
       callback(body);
     }
   );
 }
 
 exports.sync = function (req, res) {
-  var airtableKey = req.headers.authorizationairtable;
-  bubbleKey = req.headers.authorizationbubble;
-  console.log(airtableKey);
-  airtableapi.getDataFromAirtable(airtableKey, function (airtableData) {
-    getAllDataFromBubble(function (bubble_data) {
-      findAdd(airtableData, bubble_data);
-      findDelete(airtableData, bubble_data);
-      findModified(airtableData, bubble_data);
-      res.send("working");
+  try {
+    var airtableKey = req.headers.authorizationairtable;
+    bubbleKey = req.headers.authorizationbubble;
+    airtableapi.getDataFromAirtable(airtableKey, function (airtableData) {
+      getAllDataFromBubble(function (bubble_data) {
+        findAdd(airtableData, bubble_data);
+        findDelete(airtableData, bubble_data);
+        findModified(airtableData, bubble_data);
+        res.send("Synchronization was executed successfully");
+      });
     });
-  });
+  } catch (e) {
+    res.send(e);
+  }
 };
 
 function findAdd(airtableData, bubbleData) {
   var bubbleObj = bubbleData;
   var listToAdd = [];
-
   airtableData.forEach((airtableItem) => {
     if (airtableItem.app === undefined) {
       airtableData.pop(airtableItem);
@@ -140,18 +135,10 @@ function findAdd(airtableData, bubbleData) {
         onnewpage_number: airtableItem.on_new_page || 0,
         question_text: airtableItem.question || "",
         score_text: airtableItem.score || "",
+        selection_of_answers_list_text: airtableItem.answers || ["Prompt"],
       };
 
       listToAdd.push(newBubbleItem);
-      console.log(
-        "'" +
-          newBubbleItem.airtableid_text +
-          "'" +
-          " " +
-          "'" +
-          airtableItem.id +
-          "'"
-      );
     }
   });
 
@@ -161,8 +148,9 @@ function findAdd(airtableData, bubbleData) {
   listToAdd.forEach((newitem) => {
     try {
       postDataToBubble(newitem, function (response) {
-        console.log(newitem);
+        console.log(response);
       });
+      console.log(newitem);
     } catch (e) {
       console.log(e);
     }
@@ -188,7 +176,9 @@ function findDelete(airtableData, bubbleData) {
 
   listToDelete.forEach((item) => {
     try {
-      deleteDataFromBubble(item._id, function (response) {});
+      deleteDataFromBubble(item._id, function (response) {
+        console.log(response);
+      });
     } catch (e) {
       console.log(e);
     }
@@ -215,10 +205,9 @@ function findModified(airtableData, bubbleData) {
           bubbleItem.dynamic_text != airtableItem.dynamic ||
           bubbleItem.grouping_text != airtableItem.grouping ||
           bubbleItem.maxchar_number != airtableItem.max_char ||
-          bubbleItem.onnewpage_number != airtableItem.on_new_page
+          bubbleItem.onnewpage_number != airtableItem.on_new_page ||
+          bubbleItem.selection_of_answers_list_text != airtableItem.answers
         ) {
-          //    console.log(bubbleItem);
-          //    console.log(airtableItem);
           dictionaryItem.id = bubbleItem._id;
         }
       }
@@ -236,6 +225,7 @@ function findModified(airtableData, bubbleData) {
         onnewpage_number: airtableItem.on_new_page || 0,
         question_text: airtableItem.question || "",
         score_text: airtableItem.score || "",
+        selection_of_answers_list_text: airtableItem.answers || [],
       };
 
       dictionaryItem.value = newBubbleItem;

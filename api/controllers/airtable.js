@@ -3,9 +3,7 @@
 var Airtable = require("airtable");
 
 async function getDataFromAirtable(airtableKey, callback) {
-  var base = new Airtable({ apiKey: airtableKey }).base(
-    "app5ZA3rEelmM9HVC"
-  );
+  var base = new Airtable({ apiKey: airtableKey }).base("app5ZA3rEelmM9HVC");
 
   var recordList = [];
 
@@ -18,7 +16,6 @@ async function getDataFromAirtable(airtableKey, callback) {
     .eachPage(
       function page(records, fetchNextPage) {
         // This function (`page`) will get called for each page of records.
-
         records.forEach(function (record) {
           //Create object with needed fields
           var obj = {
@@ -32,8 +29,8 @@ async function getDataFromAirtable(airtableKey, callback) {
             dynamic: record.get("Dynamic"),
             on_new_page: record.get("On New Page?"),
             conditional: record.get("Conditional?"),
+            answers: record.get("Answers").split(","),
           };
-
           //Add to list of all objects
           recordList.push(obj);
         });
