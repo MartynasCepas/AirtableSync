@@ -3,15 +3,15 @@
 var Airtable = require("airtable");
 
 async function getDataFromAirtable(airtableKey, callback) {
-  var base = new Airtable({ apiKey: airtableKey }).base("app5ZA3rEelmM9HVC");
+  var base = new Airtable({ apiKey: airtableKey }).base("appcu1qWsme6tzNri");
 
   var recordList = [];
 
-  base("Prospektgenerator")
+  base("Questions")
     .select({
       // Get all records from view prospektgenerator
       maxRecords: 10000,
-      view: "Prospektgenerator",
+      view: "Sync-view",
     })
     .eachPage(
       function page(records, fetchNextPage) {
@@ -22,15 +22,28 @@ async function getDataFromAirtable(airtableKey, callback) {
             id: record.getId(),
             question: record.get("Question/CTA"),
             grouping: record.get("Grouping"),
-            score: record.get("Score"),
-            app: record.get("App"),
+            order: record.get("Order"),
+            app: record.get("Name (from App)") || [],
             max_char: record.get("Max Characters"),
             datatype: record.get("Datatype"),
             dynamic: record.get("Dynamic"),
             on_new_page: record.get("On New Page?"),
-            conditional: record.get("Conditional?"),
-            answers: record.get("Answers").split(","),
+            conditional: record.get("Conditional?") || false,
+            answers: record.get("Antwort (from Answers)") || [],
+
+            compulsory: record.get("Compulsory?") || false,
+            placeholder: record.get("Placeholder") || "",
+            is_multicolumn: record.get("Multi-Column") || false,
+            multicolumn_id: record.get("Multi-Column-ID") || "",
+            conditional_answers:
+              record.get("Antwort (from Conditional_Answer)") || [],
+            conditional_question: record.get("Conditional Question"),
+
+            description: record.get("Description (from Informations)") || [""],
+            infotext: record.get("Infotext (from Informations)") || [""],
+            video: record.get("Explainer Video (from Informations)") || [""],
           };
+
           //Add to list of all objects
           recordList.push(obj);
         });
