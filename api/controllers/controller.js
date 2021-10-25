@@ -5,7 +5,7 @@ const fetch = require("node-fetch");
 var request = require("request");
 const airtableapi = require("../controllers/airtable");
 
-const bubbleURL = "https://paper-pusher.bubbleapps.io/version-test/api/1.1/obj";
+const bubbleURL = "https://paper-pusher.bubbleapps.io/api/1.1/obj";
 
 var bubbleKey = "";
 
